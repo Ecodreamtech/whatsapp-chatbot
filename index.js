@@ -2,11 +2,10 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 
-const VERIFY_TOKEN = "whatsapp_bot_token_123";
-const PHONE_NUMBER_ID = "1004904122716846";
-const ACCESS_TOKEN = "EAAhZCKcqv5PUBRJjSz7bqEJlVhuESuMlNRWue1ZBjbm1hsOAO528qVlIxa1bR13p0khgdpRA1WtEvubZAWrjIrdGQynQWUkpdh5VSjGZC9aE7EHvgI0NhOAGkhcUZCC7D1oBqXnq10CIXPtpIR4WNppbv4DeRDzMqSalHi7IwEJXNZCZBgl6ocG6gtcG7ExeV6uhFZBwLZCXmiwAosF6ZB9PV6bMyqaO6kwcimFWuLBtA9hWk2eXe2tpFYcg2AqWPxZC0y3IYb3dLPSl6Hv1lPczZADsbAZDZD";
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "whatsapp_bot_token_123";
+const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID || "1004904122716846";
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
 
-// Webhook doğrulama
 app.get('/webhook', (req, res) => {
   if (req.query['hub.verify_token'] === VERIFY_TOKEN) {
     res.send(req.query['hub.challenge']);
@@ -15,7 +14,6 @@ app.get('/webhook', (req, res) => {
   }
 });
 
-// Gelen mesajları al ve yanıt ver
 app.post('/webhook', async (req, res) => {
   const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
   if (message && message.type === 'text') {
