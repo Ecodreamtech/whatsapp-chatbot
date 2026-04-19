@@ -5,6 +5,7 @@ app.use(express.json());
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "whatsapp_bot_token_123";
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID || "1004904122716846";
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 app.get('/webhook', (req, res) => {
   if (req.query['hub.verify_token'] === VERIFY_TOKEN) {
@@ -20,10 +21,28 @@ app.post('/webhook', async (req, res) => {
     const from = message.from;
     const text = message.text.body;
     console.log(`Mesaj: ${from} → ${text}`);
-    await sendReply(from, `Merhaba! "${text}" mesajını aldım. 🤖`);
+    const reply = await getGeminiReply(text);
+    await sendReply(from, reply);
   }
   res.sendStatus(200);
 });
+
+async function getGeminiReply(userMessage) {
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: userMessage }] }]
+      })
+    });
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
+  } catch (error) {
+    console.error('Gemini hatası:', error);
+    return 'Üzgünüm, şu an cevap veremiyorum. Lütfen tekrar dene.';
+  }
+}
 
 async function sendReply(to, message) {
   await fetch(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, {
