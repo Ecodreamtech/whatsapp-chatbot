@@ -27,27 +27,34 @@ app.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
-async function getGeminiReply(userMessage) {
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: userMessage }] }]
-      })
-    });
-    const data = await response.json();
-    console.log('Gemini yanıt:', JSON.stringify(data));
-    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-      return data.candidates[0].content.parts[0].text;
-    } else {
+async function getGeminiReply(userMessage, retries = 3, delay = 1000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: userMessage }] }]
+        })
+      });
+      const data = await response.json();
+      console.log('Gemini yanıt:', JSON.stringify(data));
+      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        return data.candidates[0].content.parts[0].text;
+      }
+      if (data.error && data.error.code === 503) {
+        console.log(`503 hatası, ${delay}ms sonra tekrar deneniyor...`);
+        await new Promise(res => setTimeout(res, delay));
+        delay *= 2;
+        continue;
+      }
       console.error('Beklenmeyen yanıt:', JSON.stringify(data));
       return 'Üzgünüm, şu an cevap veremiyorum.';
+    } catch (error) {
+      console.error('Gemini hatası:', error);
     }
-  } catch (error) {
-    console.error('Gemini hatası:', error);
-    return 'Üzgünüm, şu an cevap veremiyorum.';
   }
+  return 'Üzgünüm, şu an cevap veremiyorum.';
 }
 
 async function sendReply(to, message) {
