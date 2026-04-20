@@ -28,26 +28,28 @@ app.post('/webhook', async (req, res) => {
 });
 
 async function getGeminiReply(userMessage) {
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: userMessage }] }]
-      })
-    });
-    const data = await response.json();
-    console.log('Gemini yanıt:', JSON.stringify(data));
-    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-      return data.candidates[0].content.parts[0].text;
-    } else {
-      console.error('Beklenmeyen yanıt:', JSON.stringify(data));
-      return 'Üzgünüm, şu an cevap veremiyorum.';
+  const models = ['gemini-1.5-flash', 'gemini-1.0-pro', 'gemini-pro'];
+  
+  for (const modelName of models) {
+    try {
+      console.log(`Deneniyor: ${modelName}`);
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: userMessage }] }]
+        })
+      });
+      const data = await response.json();
+      console.log(`${modelName} yanıt:`, JSON.stringify(data));
+      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        return data.candidates[0].content.parts[0].text;
+      }
+    } catch (error) {
+      console.error(`${modelName} hatası:`, error);
     }
-  } catch (error) {
-    console.error('Gemini hatası:', error);
-    return 'Üzgünüm, şu an cevap veremiyorum.';
   }
+  return 'Üzgünüm, şu an cevap veremiyorum.';
 }
 
 async function sendReply(to, message) {
