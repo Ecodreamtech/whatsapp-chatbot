@@ -37,10 +37,16 @@ async function getGeminiReply(userMessage) {
       })
     });
     const data = await response.json();
-    return data.candidates[0].content.parts[0].text;
+    console.log('Gemini yanıt:', JSON.stringify(data));
+    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+      return data.candidates[0].content.parts[0].text;
+    } else {
+      console.error('Beklenmeyen yanıt:', JSON.stringify(data));
+      return 'Üzgünüm, şu an cevap veremiyorum.';
+    }
   } catch (error) {
     console.error('Gemini hatası:', error);
-    return 'Üzgünüm, şu an cevap veremiyorum. Lütfen tekrar dene.';
+    return 'Üzgünüm, şu an cevap veremiyorum.';
   }
 }
 
