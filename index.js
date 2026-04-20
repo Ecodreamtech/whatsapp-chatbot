@@ -1,6 +1,4 @@
 const express = require('express');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-
 const app = express();
 app.use(express.json());
 
@@ -8,9 +6,6 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "whatsapp_bot_token_123";
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID || "1004904122716846";
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 app.get('/webhook', (req, res) => {
   if (req.query['hub.verify_token'] === VERIFY_TOKEN) {
@@ -34,11 +29,21 @@ app.post('/webhook', async (req, res) => {
 
 async function getGeminiReply(userMessage) {
   try {
-    const result = await model.generateContent(userMessage);
-    const response = await result.response;
-    const text = response.text();
-    console.log('Gemini yanıt:', text);
-    return text;
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: userMessage }] }]
+      })
+    });
+    const data = await response.json();
+    console.log('Gemini yanıt:', JSON.stringify(data));
+    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+      return data.candidates[0].content.parts[0].text;
+    } else {
+      console.error('Beklenmeyen yanıt:', JSON.stringify(data));
+      return 'Üzgünüm, şu an cevap veremiyorum.';
+    }
   } catch (error) {
     console.error('Gemini hatası:', error);
     return 'Üzgünüm, şu an cevap veremiyorum.';
